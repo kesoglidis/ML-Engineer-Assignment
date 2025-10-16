@@ -1,14 +1,15 @@
 from typing import Optional
 import numpy as np
 import gymnasium as gym
+# from gymnasium.envs.registration import
 
 
 
 
 class GridEnv(gym.Env):
-    def __init__(self, length: int = 7, height: int = 6, obstacles: int = 3, render_mode = 'human'):
-        # The length and height of the grid (7x6 by default)
-        self.length = length
+    def __init__(self, width: int = 7, height: int = 6, obstacles: int = 3, render_mode = 'human'):
+        # The width and height of the grid (7x6 by default)
+        self.width = width
         self.height = height
 
         # The number of obstacles that the robot must avoid
@@ -24,13 +25,13 @@ class GridEnv(gym.Env):
         # Dict space gives us structured, human-readable observations
         self.observation_space = gym.spaces.Dict(
             {
-                "agent": gym.spaces.Box(np.array([0,0]), np.array([length - 1, height - 1]), shape=(2,), dtype=int),   
-                "target": gym.spaces.Box(np.array([0,0]), np.array([length - 1, height - 1]), shape=(2,), dtype=int),  
+                "agent": gym.spaces.Box(np.array([0,0]), np.array([width - 1, height - 1]), shape=(2,), dtype=int),   
+                "target": gym.spaces.Box(np.array([0,0]), np.array([width - 1, height - 1]), shape=(2,), dtype=int),  
             }
         )
 
         for i in range(obstacles):
-            self.observation_space[f"obstacle_{i}"] = gym.spaces.Box(np.array([0,0]), np.array([length - 1, height - 1]), shape=(2,), dtype=int)
+            self.observation_space[f"obstacle_{i}"] = gym.spaces.Box(np.array([0,0]), np.array([width - 1, height - 1]), shape=(2,), dtype=int)
         # Define what actions are available (4 directions)
         self.action_space = gym.spaces.Discrete(4)
 
@@ -65,7 +66,10 @@ class GridEnv(gym.Env):
         return {
             "distance": np.linalg.norm(
                 self._agent_location - self._target_location, ord=1
-            )
+            ),
+            "hit_wall": False,
+            "hit_obstacle": False,
+            "hit_target":  False
         }
 
     def reset(self, seed: Optional[int] = None, options: Optional[dict] = None):
@@ -83,21 +87,21 @@ class GridEnv(gym.Env):
 
         # Randomly place the agent anywhere on the grid
         self._agent_location = self.np_random.integers(
-            (0,0), (self.length - 1, self.height - 1), size=2, dtype=int
+            (0,0), (self.width - 1, self.height - 1), size=2, dtype=int
         )
 
         # Randomly place target, ensuring it's different from agent position
         self._target_location = self._agent_location
         while np.array_equal(self._target_location, self._agent_location):
             self._target_location = self.np_random.integers(
-                (0,0), (self.length - 1, self.height - 1), size=2, dtype=int
+                (0,0), (self.width - 1, self.height - 1), size=2, dtype=int
             )
 
         # self._obstacle_locations = []
         for i in range(self.obstacles):
             while True:
                 obstacle = np.array([
-                    self.np_random.integers(0, self.length),
+                    self.np_random.integers(0, self.width),
                     self.np_random.integers(0, self.height)
                 ])
 
@@ -113,6 +117,9 @@ class GridEnv(gym.Env):
 
         observation = self._get_obs()
         info = self._get_info()
+        self.old_distance = info['distance']
+
+        self.steps = 0
 
         return observation, info
 
@@ -127,39 +134,57 @@ class GridEnv(gym.Env):
         """
         # Map the discrete action (0-3) to a movement direction
         direction = self._action_to_direction[action]
+        # Initialize reward, truncation and termination
+        reward = 0
+        truncated = False
+        terminated = False
 
-        # Update agent position, ensuring it stays within grid bounds
-        # np.clip prevents the agent from walking off the edge
-        old_position = self._agent_location
-        if action == 0 or action == 2:
-            size = self.length
-        elif action == 1 or action == 3:
-            size = self.height
-
-        self._agent_location = np.clip(
-            self._agent_location + direction, 0, size - 1
+        # Attempt move and clip within bounds
+        new_position = self._agent_location + direction
+        clipped_position = np.clip(
+            new_position,
+            [0, 0],
+            [self.width - 1, self.height - 1]
         )
 
-        print('Agent: ', self._agent_location)
-        print('Obstacles: ', self._obstacle_locations)
+        # Update agent position and distance
+        self._agent_location = clipped_position
+        info = self._get_info()
+        observation = self._get_obs()
+
+        # Check if agent hit any grid bounds
+        if not np.array_equal(new_position, clipped_position):
+            reward = -5
+            info['hit_wall'] = True
+            terminated = True
+
+        # Check if agent hit any of the obstacles
         for obstacle in self._obstacle_locations:
             if np.array_equal(self._agent_location, obstacle):
-                print('Old position')
-                self._agent_location = old_position
+                reward = -40
+                info['hit_obstacle'] = True
+                terminated = True
+ 
+        # Calculating steps made and penalizing each step
+        # If steps are twice the size of the grid, the episode ends due to time limit
+        self.steps += 1
+        if self.steps > self.width * self.height:
+            reward = -5
+            truncated = True
+        # reward -= 0.1 * self.steps
 
-        # Check if agent reached the target
-        terminated = np.array_equal(self._agent_location, self._target_location)
+        # Reward based on minimizing distance
+        reward += self.old_distance - info['distance'] 
+        self.old_distance = info['distance']
 
-        # We don't use truncation in this simple environment
-        # (could add a step limit here if desired)
-        truncated = False
+        if np.array_equal(self._agent_location, self._target_location):
+            reward += 20
+            info['hit_target'] = True
+            terminated = True
+        
+        # Consistent magnitude reward
+        reward = np.clip(reward, -5, 5)
 
-        # Simple reward structure: +1 for reaching target, 0 otherwise
-        # Alternative: could give small negative rewards for each step to encourage efficiency
-        reward = 1 if terminated else 0
-
-        observation = self._get_obs()
-        info = self._get_info()
 
         return observation, reward, terminated, truncated, info
 
@@ -170,7 +195,7 @@ class GridEnv(gym.Env):
             # Print a simple ASCII representation
             for y in range(self.height - 1, -1, -1):  # Top to bottom
                 row = ""
-                for x in range(self.length):
+                for x in range(self.width):
                     if np.array_equal([x, y], self._agent_location):
                         row += "A "  # Agent
                     elif np.array_equal([x, y], self._target_location):
