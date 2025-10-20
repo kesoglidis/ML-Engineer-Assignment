@@ -29,7 +29,7 @@ GridEnv/
 
 ## Run the training script:
 ```bash
-python train.py```
+python train.py
 ```
 
 The script will train an on-policy A2C agent and an off-policy DQN agent until convergence on three 6x6 grids with 5 obstacles and 0,2,5 bonus positions respectively.
@@ -37,7 +37,7 @@ While logging progress, which includes average reward and success rate. Finally,
 
 ## Run the evaluation script:
 ```bash
-python evaluation.py```
+python evaluation.py
 ```
 Run the evaluation script to test a trained model over 100 episodes
 
