@@ -2,9 +2,9 @@
 
 __pycache__/environment.cpython-312.pyc
 
-trained_models/A2C_final.zip
+trained_models/Expanded_A2C_final.zip
 
-trained_models/DQN_final.zip
+trained_models/Expanded_DQN_final.zip
 
 __pycache__/evaluate.cpython-312.pyc
 
