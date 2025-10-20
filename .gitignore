@@ -1,3 +1,59 @@
 /venv
 
 __pycache__/environment.cpython-312.pyc
+
+trained_models/A2C_final.zip
+
+trained_models/DQN_final.zip
+
+__pycache__/evaluate.cpython-312.pyc
+
+*.pyc
+
+dqn_environment.py
+
+main.py
+
+old_environment.py
+
+trained_Dict 1st/A2C_final.zip
+
+trained_Dict 1st/DQN_final.zip
+
+trained_Dict 1st/ExpandedA2C_final.zip
+
+trained_Dict 1st/ExpandedDQN_final.zip
+
+trained_Dict 1st/ExpandedPPO_final.zip
+
+trained_Dict 1st/PPO_final.zip
+
+trained_models DICT 2nd/A2C_final.zip
+
+trained_models DICT 2nd/DQN_final.zip
+
+trained_models DICT 2nd/Expanded_A2C_final.zip
+
+trained_models DICT 2nd/Expanded_DQN_final.zip
+
+trained_models DICT 2nd/ExpandedA2C_final.zip
+
+trained_models DICT 2nd/ExpandedDQN_final.zip
+
+trained_models DICT 2nd/ExpandedPPO_final.zip
+
+trained_models DICT 2nd/PPO_final.zip
+
+trained_models/Expanded_PPO_final.zip
+
+trained_models/ExpandedPPO_final.zip
+
+trained_models/PPO_final.zip
+
+environment.py
+
+trained_models/Expanded_b4_A2C_final.zip
+
+trained_models/ExpandedA2C_final.zip
+
+trained_models/ExpandedDQN_final.zip

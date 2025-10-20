@@ -1,11 +1,7 @@
-"""
-Evaluate trained RL agents (A2C, DQN, PPO) on the GridEnv environment.
-Computes average episode length, average reward, and success rate.
-"""
-
 import os
 import numpy as np
-from environment import GridEnv
+from expanded_env import GridEnv
+from dqn_environment import DQNGridEnv
 from collections import defaultdict
 from stable_baselines3 import A2C, DQN, PPO
 
@@ -18,6 +14,7 @@ def evaluate(model, env, n_episodes=100, render=False):
     total_rewards = []
     total_steps = []
     outcomes = defaultdict(int)
+    outcomes["bonus"] = 0
 
     for ep in range(n_episodes):
         done = False
@@ -41,10 +38,11 @@ def evaluate(model, env, n_episodes=100, render=False):
                 elif info.get("TimeLimit.truncated"):
                     outcomes["timelimits"] += 1
                 else:
-                    outcomes["unknown"] += 1
-                # episode_reward = reward
-            # if render:
-            #     vec_env.render("human")
+                    done = False
+                    # outcomes["unknown"] += 1
+                if "hit_bonus" in info:
+                    outcomes["bonus"] += info["hit_bonus"]
+                episode_reward = reward
 
         total_rewards.append(episode_reward)
         total_steps.append(steps)
@@ -53,30 +51,50 @@ def evaluate(model, env, n_episodes=100, render=False):
     avg_steps = np.mean(total_steps)
     success_rate = (outcomes["targets"] / n_episodes) * 100.0
 
-    return avg_reward, outcomes, avg_steps, success_rate
+    return avg_reward, outcomes, avg_steps, success_rate # avg bonus #time to first bonus
 
 
 if __name__ == "__main__":
-    env = GridEnv()
     model_dir = "trained_models"
+
+    # Define environments per algorithm
+    envs = {
+        "A2C": GridEnv(width=6, height=6, obstacles=5, bonus=0),
+        "DQN": GridEnv(width=6, height=6, obstacles=5, bonus=0),
+        "Expanded_b2_A2C": GridEnv(width=6, height=6, obstacles=5, bonus=2),
+        "Expanded_b2_DQN": GridEnv(width=6, height=6, obstacles=5, bonus=2),
+        "Expanded_b5_A2C": GridEnv(width=6, height=6, obstacles=5, bonus=2),
+        "Expanded_b5_DQN": GridEnv(width=6, height=6, obstacles=5, bonus=2),
+    }
+
+    # Define algorithms to evaluate
     algorithms = {
         "A2C": A2C,
         "DQN": DQN,
-        #"PPO": PPO,
+        "Expanded_b2_A2C": A2C,
+        "Expanded_b2_DQN": DQN,
+        "Expanded_b5_A2C": A2C,
+        "Expanded_b5_DQN": DQN,
     }
 
-    print("Agent Evaluation Results (100 Episodes)")
+    print("Agent Evaluation Results (100 Episodes)\n")
 
     for name, algo_class in algorithms.items():
+        env = envs[name]  # map name to env
         model_path = os.path.join(model_dir, f"{name}_final.zip")
-        if not os.path.exists(model_path):
-            print(f"Model for {name} not found at {model_path}, skipping.")
-            continue
-
+        
+        # Load the trained model
         model = algo_class.load(model_path, env=env)
-        avg_steps, avg_reward, success_rate = evaluate(model, env, n_episodes=100)
 
-        print(f"\n--- {name} ---")
-        print(f"Average steps per episode:   {avg_steps:.2f}")
-        print(f"Average total reward:        {avg_reward:.3f}")
+        # Evaluate
+        avg_reward, outcomes, avg_steps, success_rate = evaluate(model, env, n_episodes=100)
+
+        # Print results
+        print(f"\n{name}")
+        print(f"Average steps per episode:    {avg_steps:.2f}")
+        print(f"Average total reward:         {avg_reward:.3f}")
         print(f"Success rate (hit target %): {success_rate:.2f}%")
+        for k, v in outcomes.items():
+            print(f"{k.capitalize()}: {v}")
+
+            
