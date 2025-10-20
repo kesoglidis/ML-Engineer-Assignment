@@ -88,14 +88,14 @@ if __name__ == "__main__":
     }
 
     # Simple Grid Environment (obstacles only) 
-    # simple_envs = {
-    #     "A2C": GridEnv(width=6, height=6, obstacles=5, bonus=0),
-    #     "DQN": GridEnv(width=6, height=6, obstacles=5, bonus=0),
-    # }
+    simple_envs = {
+        "A2C": GridEnv(width=6, height=6, obstacles=5, bonus=0),
+        "DQN": GridEnv(width=6, height=6, obstacles=5, bonus=0),
+    }
 
-    # print("Training on Grid Environment with obstacles only (single target)")
-    # for name, algo_class in algorithms.items():
-    #     train(simple_envs[name], algo_class, name)
+    print("Training on Grid Environment with obstacles only (single target)")
+    for name, algo_class in algorithms.items():
+        train(simple_envs[name], algo_class, name)
 
     # Expanded Grid Environment (bonuses included)
     expanded_envs = {
